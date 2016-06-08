@@ -1,0 +1,16 @@
+\select@language {spanish}
+\contentsline {section}{\numberline {1}Introducci\IeC {\'o}n}{3}{section.1}
+\contentsline {section}{\numberline {2}Explicaci\IeC {\'o}n de la implementacion}{3}{section.2}
+\contentsline {subsection}{\numberline {2.1}Estructura t\_aula}{3}{subsection.2.1}
+\contentsline {subsection}{\numberline {2.2}Estructura thdata}{3}{subsection.2.2}
+\contentsline {subsection}{\numberline {2.3}Funcion t\_aula\_iniciar\_vacia}{3}{subsection.2.3}
+\contentsline {subsection}{\numberline {2.4}Funcion t\_aula\_ingresar}{4}{subsection.2.4}
+\contentsline {subsection}{\numberline {2.5}Funcion t\_aula\_liberar}{4}{subsection.2.5}
+\contentsline {subsection}{\numberline {2.6}Funcion terminar\_servidor\_de\_alumno}{4}{subsection.2.6}
+\contentsline {subsection}{\numberline {2.7}Funcion intentar\_moverse}{4}{subsection.2.7}
+\contentsline {subsection}{\numberline {2.8}Funcion colocar\_mascara}{5}{subsection.2.8}
+\contentsline {subsection}{\numberline {2.9}Funcion atendedor\_de\_alumno}{5}{subsection.2.9}
+\contentsline {subsection}{\numberline {2.10}Funcion crear\_thread\_servidor}{6}{subsection.2.10}
+\contentsline {subsection}{\numberline {2.11}Funcion main}{6}{subsection.2.11}
+\contentsline {section}{\numberline {3}Sistema libre de Deadlock}{7}{section.3}
+\contentsline {section}{\numberline {4}Escalamiento a un mill\IeC {\'o}n de usuarios}{11}{section.4}

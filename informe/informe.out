@@ -1,0 +1,15 @@
+\BOOKMARK [1][-]{section.1}{Introducci\363n}{}
+\BOOKMARK [1][-]{section.2}{Explicaci\363n de la implementacion}{}
+\BOOKMARK [2][-]{subsection.2.1}{Estructura t\137aula}{section.2}
+\BOOKMARK [2][-]{subsection.2.2}{Estructura thdata}{section.2}
+\BOOKMARK [2][-]{subsection.2.3}{Funcion t\137aula\137iniciar\137vacia}{section.2}
+\BOOKMARK [2][-]{subsection.2.4}{Funcion t\137aula\137ingresar}{section.2}
+\BOOKMARK [2][-]{subsection.2.5}{Funcion t\137aula\137liberar}{section.2}
+\BOOKMARK [2][-]{subsection.2.6}{Funcion terminar\137servidor\137de\137alumno}{section.2}
+\BOOKMARK [2][-]{subsection.2.7}{Funcion intentar\137moverse}{section.2}
+\BOOKMARK [2][-]{subsection.2.8}{Funcion colocar\137mascara}{section.2}
+\BOOKMARK [2][-]{subsection.2.9}{Funcion atendedor\137de\137alumno}{section.2}
+\BOOKMARK [2][-]{subsection.2.10}{Funcion crear\137thread\137servidor}{section.2}
+\BOOKMARK [2][-]{subsection.2.11}{Funcion main}{section.2}
+\BOOKMARK [1][-]{section.3}{Sistema libre de Deadlock}{}
+\BOOKMARK [1][-]{section.4}{Escalamiento a un mill\363n de usuarios}{}

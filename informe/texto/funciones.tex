@@ -1,0 +1,127 @@
+\section{Explicación de la implementacion}
+
+A continuación daremos una explicación detallada de el funcionamiento de cada una de las funciones implementadas en el servidor y de las estructuras utilizadas.
+
+
+\subsection{Estructura t\_aula}
+
+Esta estructura representa el aula y esta formada por:
+\begin{itemize}
+	\item Una matriz de enteros que representa cada posición del aula y cuantas personas hay en dicha posición.
+	\item Un entero que indica la cantidad total de personas en el aula y un mutex para esta variable.
+	\item Un entero que indica la cantidad de rescatistas disponibles y un mutex para esta variable.
+	\item Una matriz de mutexes, del mismo tamaño que la matriz del aula, donde cada mutex sirve para bloquear la posición correspondiente de la matriz que representa el aula. Esta matriz nos permite minimizar la cantidad de posiciones del aula que bloqueamos al mover a un alumno a solo dos, en lugar de tener que bloquear la matriz completa si usáramos un solo mutex para toda la matriz.
+	\item Una variable de condición que utilizamos para saber si hay al menos un rescatista disponible.
+	\item Una variable de condición que utilizamos para saber si ya tenemos formado un grupo de alumnos en la salida.
+	\item Un booleano que indica si ya se formo un grupo de alumnos en la salida del aula, un entero que indica cuantos alumnos del grupo actual \textit{(si es que ya se formo un grupo)} salieron del aula y un mutex para ambas variables \textit{(el mismo para las dos)}.
+\end{itemize}
+
+
+\subsection{Estructura thdata}
+
+Esta estructura contiene los datos requeridos por los threads que atienden a cada cliente. Estos datos son:
+\begin{itemize}
+	\item El file descriptor de la conexión con el cliente (alumno).
+	\item Un puntero a la estructura del aula en la que se encuentra el alumno.
+\end{itemize}
+
+
+\subsection{Funcion t\_aula\_iniciar\_vacia}
+
+\textbf{Se encarga de inicializar la estructura t\_aula pasada por parametro.}
+
+En esta función, primero colocamos cero en todas las posiciones de la matriz que representa el aula, indicando que no hay ningún alumno en ellas e inicializamos el mutex correspondiente a cada posición en \textit{No tomado} \textit{(Null, 1, o el valor que use la representación interna)}.
+
+Luego, inicializamos la cantidad de personas en el aula en cero y la cantidad de rescatistas disponibles en el valor de la constante RESCATISTAS. También inicializamos los mutex correspondientes a ambas variables en \textit{No tomado}.
+
+También inicializamos en \textit{No tomado} el mutex de la cantidad de personas en el aula y el de rescatistas disponibles.
+
+Inicializamos la variable booleana que indica que se formo un grupo de alumnos en la salida en \textit{false} y el entero que indica la cantidad de alumnos que salieron del grupo actual en cero.
+
+Finalmente, inicializamos las variables de condición relacionadas con los rescatistas disponibles y con la salida del aula a su valor por defecto.
+
+
+\subsection{Funcion t\_aula\_ingresar}
+\textbf{Se encarga de ingresar a un alumno al aula.}
+
+Aqui, primero, pedimos el mutex correspondiente a la variable de la estructura t\_aula que indica el número de personas, luego la incrementamos en uno y liberamos el mutex.
+
+Luego, pedimos el mutex de \textbf{la posición en el aula} que corresponde a la posición inicial del alumno, incrementamos la cantidad de personas en esa posición del aula en uno y liberamos el mutex.
+
+
+\subsection{Funcion t\_aula\_liberar}
+\textbf{Se encarga de sacar a un alumno del aula.}
+
+Lo primero que hacemos en esta función es incrementar el numero de alumnos en la salida en uno.
+
+Luego, si ya se formo un grupo de alumnos en la salida \textit{(es decir, ya hay mas de 5 alumnos es la salida)} el alumno actual deberá esperar a que dicho grupo abandone el aula.
+
+En caso contrario el alumno deberá esperar a que se forme un grupo de cinco alumnos en la salida.
+
+Si el alumno es el ultimo necesario para completar el grupo, entonces avisa a los otros cuatro alumnos que están esperando que ya pueden salir y estos salen.
+
+El ultimo alumno del grupo en salir se encarga de resetear las variables de la estructura del aula que indican que un grupo esta saliendo y de avisar a los otros alumnos que querian salir \textit{(si es que hay)}, que ya pueden formar otro grupo.
+
+
+\subsection{Funcion terminar\_servidor\_de\_alumno}
+
+Termina la conexión con el cliente del alumno, lo saca del aula y termina la ejecución del thread en el servidor encargado de atender a dicho cliente.
+
+\subsection{Funcion intentar\_moverse}
+\textbf{Se encarga de actualizar la posición del alumno en el aula realizando el movimiento solicitado.}
+
+Lo primero que hacemos aqui es pedir el mutex de la posición destino para determinar si en esta hay espacio suficiente para el alumno y luego liberamos el mutex.
+
+Luego determinamos si el alumno pudo moverse, es decir, si este llegó a la salida o si la posición destino está dentro del aula (es decir, que el alumno no atravesó las paredes del aula) y hay espacio para una persona más en dicha posición.
+
+Si el alumno no puede moverse la función termina retornando false (es decir, el alumno no pudo moverse).
+
+En cambio, si el alumno si puede moverse, pedimos el mutex de su posición actual y de la posición destino de modo de actualizar ambas posiciones simultáneamente. 
+
+Aqui, además, chequeamos ciertas condiciones sobre las posiciones de forma de determinar en qué orden pedir los dos mutex. Esto lo hacemos para evitar que se produzca deadlock y lo explicamos con detalle en la sección \textbf{Deadlock}.
+
+Una vez que incrementamos en uno el valor de la posición destino y disminuimos en uno el valor de la posición actual, liberamos ambos mutex, actualizamos la posición del alumno y la función termina retornando true (es decir, el alumno pudo moverse).
+
+\subsection{Funcion colocar\_mascara}
+\textbf{Se encarga de colocar la máscara al alumno, una vez que el alumno llegó a la salida del aula.}
+
+Primero pedimos el mutex de los rescatistas, luego el thread queda a la espera \textit{(duerme)} si no hay ningún rescatista disponible y continua su ejecución cuando esta condición cambia \textit{(cond\_signal)}, es decir, hay al menos un rescatista disponible.
+
+Luego disminuimos la cantidad de rescatistas en uno, indicando que hay un rescatista más ocupado poniendo una máscara y por último liberamos el mutex.
+A continuación le colocamos la máscara al alumno.
+
+Nuevamente pedimos el mutex de los rescatistas, incrementamos la cantidad de rescatistas en uno y liberamos el mutex.
+
+Finalmente realizamos un signal sobre la variable de condición \textit{(cond\_signal)} de la estructura que representa el aula para indicar que hay un rescatista más disponible.
+
+\subsection{Funcion atendedor\_de\_alumno}
+\textbf{Es la función principal que ejecuta cada thread.}
+
+Al comienzo, esta función recibe del cliente el nombre del alumno y su posición en el aula y llama a la función \textbf{t\_aula\_ingresar}, para colocar al alumno dentro de la estructura que representa al aula en la posición indicada.
+
+Luego, la función entra en un ciclo que solo termina si se corta la comunicación con el alumno o si este llega a la salida del aula.
+
+En cada iteración del ciclo, el cliente indica en qué dirección se desea mover el alumno. En respuesta, el servidor llama a la función \textbf{intentar\_moverse} y envía al cliente el mensaje \textbf{OK} en caso de que se haya podido realizar el movimiento requerido o el mensaje \textbf{OCUPADO}, en caso contrario.
+
+En cada movimiento se chequea si el alumno llegó a la salida del aula, en caso afirmativo se procede a llamar a las funciones \textbf{colocar\_mascara} \textit{(para que un rescatista le coloque una máscara al alumno)} y a \textbf{t\_aula\_liberar} \textit{(para sacar al alumno del aula)}.
+
+Finalmente, se envía al cliente el mensaje \textbf{LIBRE} y se termina la ejecución del thread del servidor encargado de atender a dicho cliente.
+
+En caso de que el alumno no llegue a la salida al moverse, en thread queda a la espera de que el cliente que debe atender le indique una nueva dirección en la que mover al alumno.
+
+
+\subsection{Funcion crear\_thread\_servidor}
+\textbf{Se encarga de crear un thread en el servidor para atender exclusivamente a la conexión con el cliente (alumno) pasado como parámetro.}
+
+Primero creamos un thread que se encargará de ejecutar la función \textbf{atendedor\_de\_alumno}. A dicho thread le pasamos como parámetro un puntero a una estructura thdata que contiene la siguiente información: el file descriptor del cliente y el aula.
+
+Estos datos son requeridos por el thread para conocer la conexión de la cual debe estar pendiente (es decir, el alumno al cual atiende) y el aula en la cual se encuentra el alumno. 
+
+
+\subsection{Funcion main}
+\textbf{Es la función encarga de crear los threads encargados de atender las conexiones de los clientes.}
+
+El único cambio realizado a esta funcion con respecto a la función utilizada por \textit{servidor\_mono.c} es en el ciclo FOR que se encuentra al final.
+
+Dicho cambio consiste únicamente en llamar la función \textbf{crear\_thread\_servidor} \textit{(explicada anteriormente)} cada vez que se acepta una nueva conexión con un cliente en el servidor.
+Este cambio es, en esencia, el que permite al servidor atender a más de un cliente simultáneamente.

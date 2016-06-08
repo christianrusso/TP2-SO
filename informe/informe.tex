@@ -1,0 +1,35 @@
+\documentclass[10pt, a4paper]{article}
+\input{config/paquetes.tex}
+\input{config/variables.tex}
+
+\begin{document}
+\input{config/caratula.tex}	
+
+\newcommand{\cod}[1]{{\tt #1}}
+\newcommand{\negro}[1]{{\bf #1}}
+\newcommand{\ital}[1]{{\em #1}}
+\newcommand{\may}[1]{{\sc #1}}
+\newcommand{\tab}{\hspace*{2em}}
+
+\newenvironment{myindentpar}[1]
+{\begin{list}{1}
+         {\setlength{\leftmargin}{#1}}
+         \item[]
+}
+{\end{list} }
+
+\input{texto/introduccion.tex}
+
+\input{texto/funciones.tex}
+\newpage
+
+\input{texto/deadlock.tex}
+\newpage
+
+\input{texto/escalamiento.tex}
+\newpage
+
+\end{document}
+
+
+

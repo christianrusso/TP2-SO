@@ -1,0 +1,104 @@
+\section{Sistema libre de Deadlock}
+
+A continuación explicaremos por que nuestro servidor esta completamente libre de \textit{Deadlocks}.
+
+Primero, recordemos las cuatro condiciones de Coffman para que haya Deadlock en un sistema:
+\begin{enumerate}
+	\item Exclusión mutua.
+	\item Retención y espera.
+	\item No preemption.
+	\item Espera circular.
+\end{enumerate}
+
+Ahora queremos ver que nuestro servidor no cumple con, al menos, una de estas condiciones.
+
+A priori, no podemos saber si en el sistema que se ejecutara el servidor existe un mecanismo arbitrario que desaloja threads, de modo que vamos a suponer que la tercer condición si se cumple.
+
+Ahora, analizaremos de forma incremental las funciones del servidor, es decir, suponemos que el servidor no posee ninguna función e iremos añadiendo nuestras funciones de modo que ninguna tenga Deadlock ni genere un Deadlock en conjunto con funciones que ya eran parte del servidor.
+
+Primero, notemos que las funciones \textbf{t\_aula\_iniciar\_vacia}, \textbf{terminar\_servidor\_de\_alumno}, \textbf{atendedor\_de\_alumno}, \textbf{crear\_thread\_servidor} y la función principal del servidor, es decir, \textbf{main} no hacen uso de mutexes ni de variables de condición, por lo cual podemos estar seguros que ninguna de estas funciones introduce un Deadlock en el sistema.\\
+Hasta aquí, nuestro servidor no cumple con las condiciones 1, 2 y 4 de Coffman.\\
+
+
+Luego, las funciones \textbf{t\_aula\_ingresar} y \textbf{colocar\_mascara}, aunque si hacen uso de mutexes, solo utilizan \textbf{un mutex a la vez} cada una.
+
+La primera función pide el mutex de la cantidad de personas en el aula, lo libera y luego pide el mutex de una posición de la matriz, incrementa dicha posición y lo libera.
+
+La segunda funcion solo utiliza el mutex de los rescatistas y es la única función del servidor \textit{(completo)} que lo utiliza. Primero hace una espera en una variable de condición enlazada con el mutex de los rescatistas hasta que se cumple que hay al menos un rescatista disponible y disminuye la cantidad de rescatistas disponibles en uno. Mas adelante, la función vuelve a tomar el mutex  de los rescatistas y a incrementar el valor de los rescatistas disponibles.\\
+
+Hasta este punto, nuestro servidor no cumple las condiciones 2 y 4 de Coffman.\\
+
+Ahora añadimos al servidor la función \textbf{t\_aula\_liberar}.
+Esta función utiliza el mutex de la salida \textit{(única función del servidor que utiliza este mutex)} y el mutex de la cantidad de personas en el aula.
+Esta función hace que nuestro servidor cumpla con la segunda condición de Coffman \textit{(retención y espera)} ya que, al tener el mutex de la salida es necesario, a veces, pedir también el mutex de las personas para saber cuantas personas quedan en el aula y, así, saber a cuantas personas se debe esperar al querer salir.
+Pero \textbf{la situación inversa nunca se da}, es decir, en ningún momento un pthread que tenga el mutex de las personas en el aula va a necesitar pedir el mutex de la salida.
+Esto podemos afirmarlo porque el mutex de la salida solo es utilizado por la función \textbf{t\_aula\_liberar} y porque en esta función los mutex siempre se toman de la primer forma descrita, es decir, primero el de la salida y luego el de las personas.
+
+Entonces, podemos concluir que esta función no produce que la cuarta condición de Coffman \textit{(espera circular)} se cumpla en nuestro servidor y, por lo tanto, hasta este punto podemos afirmar que el servidor esta libre de Deadlock.\\
+
+Solo nos queda analizar la función \textbf{intentar\_moverse} y ver que esta no hace que nuestro servidor cumpla con la cuarta condición de Coffman \textit{(espera circular)}.\\
+
+Como dijimos anteriormente \textit{(en la sección donde explicamos el funcionamiento de cada función)} en esta función es necesario tomar en un orden determinado los mutex de la posición del aula en la que se encuentra el alumno y de la posición del aula a la que queremos ir, ya que sino se podría dar un caso como el siguiente:
+
+\begin{figure}[H]
+\begin{center}
+\includegraphics[width=0.9\textwidth]{img/img1.png}
+     \caption{Espera circular}
+\end{center}
+\end{figure}
+
+Lo que sucede aquí es que el alumno A esta parado en la posición ($A_x$,$A_y$), tiene el mutex de dicha posición y quiere ir a la posición ($B_x$, $B_y$) en la cual se encuentra el alumno B, el cual tiene el mutex de dicha posición, y a su vez este quiere ir a la posición ($C_x$, $C_y$) en la cual se encuentra el alumno C, que tiene el mutex de dicha posición y que quiere moverse a la posición ($A_x$, $A_y$) que, como dijimos, el alumno A posee su mutex.\\
+
+En este caso, claramente, tenemos espera circular y, dado que nuestro servidor ya cumplía las otras tres condiciones de Coffman, tenemos Deadlock.
+
+Para solventar este problema lo que hicimos fue \textbf{imponer un orden} en la forma en que los alumnos deben tomar los mutex para moverse en el aula.
+El orden impuesto es \textbf{de arriba hacia abajo y de izquierda a derecha}, siempre pensando que la posición ($0$, $0$) del aula es la que se encuentra mas arriba y mas a la izquierda.
+
+\begin{figure}[H]
+\begin{center}
+\includegraphics[width=0.9\textwidth]{img/img2.png}
+     \caption{Orden utilizado para tomar los mutexes}
+\end{center}
+\end{figure}
+
+Luego, según a que dirección quiera moverse el alumno, determinamos en que orden debe tomar los mutexes de su posición y de la posición destino:
+
+\begin{itemize}
+	\item \textbf{DERECHA}: Primero toma el mutex de su posición y luego el de la posición destino.
+	\item \textbf{IZQUIERDA}: Primero toma el mutex de la posición destino y luego el de su posición.
+	\item \textbf{ABAJO}:  Primero toma el mutex de su posición y luego el de la posición destino.
+	\item \textbf{ARRIBA}: Primero toma el mutex de la posición destino y luego el de su posición.
+\end{itemize}
+
+Este orden nos asegura que no se puedan dar casos como el explicado anteriormente, donde $N > 2$ alumnos retienen el mutex de su posición y, a su vez, quieren obtener el mutex de su posición destino ya que, dependiendo de la relación que exista entre los valores de las posiciones de los alumnos estos deberán, en algún caso, tomar primero el mutex de su posición destino y, luego, el de su posición actual.
+
+Por ejemplo, si tenemos un alumno A en la posición ($1$, $3$) que quiere ir a la posición ($1$, $4$) y en esta posición tenemos un alumno B que quiere ir a la posición ($1$, $3$) se producirá alguno de los siguientes escenarios:\\
+
+\textbf{Escenario 1}:
+\begin{itemize}
+	\item A toma el mutex de su posición impidiendo que B lo tome.
+	\item A toma el mutex de la posición de B, el cual B no puede tomar hasta que tengo el mutex de la posicion de A.
+	\item A se mueve a la posición de B y libera ambos mutexes.
+	\item B toma el mutex de la posición previa de A.
+	\item B toma el mutex de su posición.
+	\item B se mueve y libera ambos mutexes.
+\end{itemize}
+
+\textbf{Escenario 2}:
+\begin{itemize}
+	\item B toma el mutex de la posición de A impidiendo que A lo tome.
+	\item B toma el mutex de su posición, el cual A no puede tomar hasta que tenga el mutex de la posición de B.
+	\item B se mueve y libera ambos mutexes.
+	\item A toma el mutex de la posición previa de B.
+	\item A toma el mutex de su posición.
+	\item A se mueve y libera ambos mutexes.
+\end{itemize}
+
+Este ejemplo se puede extender a $N$ alumnos \textit{(pthreads)} y, en todos los casos, resultara que, al menos, un alumno podrá moverse sin que otro se lo impida \textit{(a menos que el aula este repleta y no haya lugar donde moverse, pero eso escapa del control de los mutexes)}.
+
+Finalmente, podemos concluir que el orden impuesto a la toma de los mutexes elimina la espera circular en la función y que podemos añadirla al servidor sin temor a que nos produzca Deadlock.\\
+
+Luego, añadimos al servidor todas las funciones que utilizamos y llegamos a la conclusión de que este conjunto de funciones no cumple la cuarta condición de Coffman \textit{(espera circular)} y, por lo tanto, nuestro servidor esta libre de Deadlock.
+
+%t_aula_liberar
+%intentar_moverse
